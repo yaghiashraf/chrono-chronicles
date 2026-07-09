@@ -69,8 +69,19 @@ a {
   display: none;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .intro {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 100svh;
   overflow: hidden;
   padding: clamp(20px, 4vw, 48px);
@@ -231,6 +242,7 @@ a {
 .intro-copy {
   width: min(940px, 100%);
   margin-top: clamp(58px, 7vh, 86px);
+  margin-bottom: clamp(36px, 7vh, 92px);
 }
 
 .intro-copy h1 {
@@ -278,7 +290,7 @@ a {
   background: transparent;
   color: var(--ink);
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 
 .button svg,
@@ -310,6 +322,7 @@ a {
   background: linear-gradient(180deg, #d7854c, #94451f);
   border-color: #ed9a60;
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.22), 0 16px 40px rgba(156, 74, 30, 0.28);
+  animation: ctaBreath 4200ms ease-in-out infinite;
 }
 
 .button.ghost {
@@ -317,14 +330,13 @@ a {
 }
 
 .preview-band {
-  position: absolute;
-  right: clamp(20px, 4vw, 48px);
-  bottom: 22px;
-  left: clamp(20px, 4vw, 48px);
+  position: relative;
   display: grid;
+  width: 100%;
   grid-template-columns: 170px minmax(0, 1fr);
   gap: 18px;
   align-items: end;
+  margin-top: auto;
 }
 
 .preview-label {
@@ -354,6 +366,27 @@ a {
   min-width: 0;
   border-top: 1px solid var(--line-strong);
   padding-top: 14px;
+  animation: previewRise 680ms ease both;
+}
+
+.preview-event:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.preview-event:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.preview-event:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.preview-event:nth-child(5) {
+  animation-delay: 280ms;
+}
+
+.preview-event:nth-child(6) {
+  animation-delay: 350ms;
 }
 
 .preview-event img {
@@ -363,6 +396,13 @@ a {
   border-radius: var(--radius);
   object-fit: cover;
   filter: saturate(0.82);
+  transition: border-color 180ms ease, filter 180ms ease, transform 240ms ease;
+}
+
+.preview-event:hover img {
+  border-color: rgba(98, 196, 183, 0.5);
+  filter: saturate(1) contrast(1.06);
+  transform: translateY(-2px);
 }
 
 .preview-event span,
@@ -687,6 +727,10 @@ a {
   stroke-width: 0.42;
 }
 
+.experience.is-playing .map-overlay path {
+  animation: routeTrace 3600ms linear infinite;
+}
+
 .map-overlay circle {
   fill: rgba(10, 12, 11, 0.84);
   stroke: rgba(240, 199, 126, 0.94);
@@ -700,6 +744,10 @@ a {
   left: 7%;
   z-index: 3;
   max-width: 680px;
+}
+
+.stage-image-wrap.is-changing .stage-text {
+  animation: stageTextIn 520ms ease both;
 }
 
 .stage-era,
@@ -889,6 +937,10 @@ a {
   cursor: pointer;
 }
 
+.play-button.is-playing {
+  animation: playPulse 1800ms ease-in-out infinite;
+}
+
 .play-button svg {
   width: 26px;
   height: 26px;
@@ -1011,12 +1063,8 @@ a {
   }
 
   .preview-band {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    left: auto;
     grid-template-columns: 1fr;
-    margin-top: 52px;
+    margin-top: clamp(34px, 6vh, 52px);
   }
 
   .preview-events {
@@ -1097,7 +1145,8 @@ a {
   }
 
   .intro-copy {
-    margin-top: 82px;
+    margin-top: clamp(58px, 10vh, 82px);
+    margin-bottom: 36px;
   }
 
   .intro-copy h1 {
@@ -1196,5 +1245,56 @@ a {
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
+  }
+}
+
+@keyframes ctaBreath {
+  0%,
+  100% {
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.22), 0 16px 40px rgba(156, 74, 30, 0.24);
+  }
+  50% {
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.28), 0 20px 54px rgba(226, 139, 79, 0.34);
+  }
+}
+
+@keyframes previewRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes routeTrace {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@keyframes stageTextIn {
+  from {
+    opacity: 0.7;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes playPulse {
+  0%,
+  100% {
+    box-shadow: 0 14px 42px rgba(200, 115, 60, 0.26), 0 0 0 0 rgba(226, 139, 79, 0.22);
+  }
+  50% {
+    box-shadow: 0 18px 54px rgba(200, 115, 60, 0.34), 0 0 0 12px rgba(226, 139, 79, 0);
   }
 }

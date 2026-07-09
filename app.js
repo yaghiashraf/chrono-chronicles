@@ -61,6 +61,8 @@ const eraLookup = new Map();
 ERA_DEFS.forEach((era) => era.ids.forEach((id) => eraLookup.set(id, era)));
 
 const STORAGE_KEY = "chrono-chronicles-overhaul:v1";
+const MIN_NARRATION_MS = 9000;
+const MAX_NARRATION_MS = 18000;
 const previewIds = ["big_bang", "agriculture", "democracy", "constantinople", "ww1", "hormuz"];
 
 const state = {
@@ -73,6 +75,9 @@ const state = {
 };
 
 let autoplayTimer = null;
+let narrationUtterance = null;
+let narrationAdvanceTimer = null;
+let narrationVoices = [];
 
 const app = document.querySelector(".app");
 const experience = document.querySelector("#experience");
@@ -81,6 +86,14 @@ const filterRow = document.querySelector("#filter-row");
 const timelineList = document.querySelector("#timeline-list");
 const eraScrubber = document.querySelector("#era-scrubber");
 const toast = document.querySelector("#toast");
+const narrationStatus = document.querySelector("#narration-status");
+
+if ("speechSynthesis" in window) {
+  narrationVoices = window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener?.("voiceschanged", () => {
+    narrationVoices = window.speechSynthesis.getVoices();
+  });
+}
 
 const events = rawEvents
   .map((event) => {
@@ -353,6 +366,7 @@ function selectEvent(id, options = {}) {
   if (!byId.has(id)) return;
   state.activeId = id;
   render();
+  if (state.playing) narrateActiveEvent();
   if (options.scroll !== false) {
     requestAnimationFrame(() => document.querySelector(".timeline-event.active")?.scrollIntoView({ block: "nearest" }));
   }
@@ -362,17 +376,20 @@ function selectByOffset(offset) {
   const current = activeEvent().index;
   const nextIndex = Math.max(0, Math.min(events.length - 1, current + offset));
   selectEvent(events[nextIndex].id);
-  if (nextIndex === events.length - 1 && state.playing) setPlaying(false);
 }
 
 function setPlaying(playing) {
+  const wasPlaying = state.playing;
   state.playing = playing;
-  window.clearInterval(autoplayTimer);
-  autoplayTimer = null;
+  clearPlaybackTimers();
+  experience.classList.toggle("is-playing", playing);
 
   if (playing) {
-    autoplayTimer = window.setInterval(() => selectByOffset(1), 4200);
-    showToast("Timeline playback started.");
+    narrateActiveEvent();
+    showToast("Narrated journey started.");
+  } else {
+    stopNarration();
+    if (wasPlaying) showToast("Narration paused.");
   }
 
   updatePlayButton();
@@ -381,10 +398,95 @@ function setPlaying(playing) {
 function updatePlayButton() {
   const button = document.querySelector(".play-button");
   if (!button) return;
-  button.setAttribute("aria-label", state.playing ? "Pause timeline" : "Play timeline");
+  button.classList.toggle("is-playing", state.playing);
+  button.setAttribute("aria-label", state.playing ? "Pause narrated timeline" : "Play narrated timeline");
   button.innerHTML = state.playing
     ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>`
     : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
+}
+
+function clearPlaybackTimers() {
+  window.clearInterval(autoplayTimer);
+  window.clearTimeout(narrationAdvanceTimer);
+  autoplayTimer = null;
+  narrationAdvanceTimer = null;
+}
+
+function stopNarration() {
+  narrationUtterance = null;
+  if (narrationStatus) narrationStatus.textContent = "Narration paused.";
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+function narrateActiveEvent() {
+  const event = activeEvent();
+  const text = narrationText(event);
+  clearPlaybackTimers();
+  if (narrationStatus) narrationStatus.textContent = `Narrating ${event.name}.`;
+
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text));
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = chooseNarrationVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.9;
+    utterance.pitch = 0.92;
+    utterance.volume = 1;
+    narrationUtterance = utterance;
+
+    utterance.onend = () => {
+      if (narrationUtterance !== utterance || !state.playing) return;
+      clearPlaybackTimers();
+      advanceNarratedJourney();
+    };
+
+    utterance.onerror = () => {
+      if (narrationUtterance !== utterance || !state.playing) return;
+      clearPlaybackTimers();
+      narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text));
+    };
+
+    window.speechSynthesis.speak(utterance);
+    narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text) + 1800);
+  } catch {
+    narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text));
+  }
+}
+
+function advanceNarratedJourney() {
+  if (!state.playing) return;
+  if (activeEvent().index >= events.length - 1) {
+    setPlaying(false);
+    return;
+  }
+  selectByOffset(1);
+}
+
+function narrationText(event) {
+  const insight = event.insight.replace(/^Why it matters:\s*/i, "");
+  return `${event.name}. ${event.displayYear}. ${firstSentences(event.description, 1)} Why it matters: ${insight}`;
+}
+
+function estimatedNarrationMs(text) {
+  const words = text.trim().split(/\s+/).length;
+  return Math.max(MIN_NARRATION_MS, Math.min(MAX_NARRATION_MS, words * 360));
+}
+
+function chooseNarrationVoice() {
+  const voices = narrationVoices.length ? narrationVoices : window.speechSynthesis.getVoices();
+  return (
+    voices.find((voice) => /natural|premium|enhanced/i.test(voice.name) && /^en/i.test(voice.lang)) ??
+    voices.find((voice) => /^en/i.test(voice.lang)) ??
+    voices[0] ??
+    null
+  );
 }
 
 function toggleBookmark() {
