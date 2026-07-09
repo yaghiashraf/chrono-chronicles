@@ -2,6 +2,7 @@ import { rawEvents } from "./events.js";
 import { eventInsights } from "./insights.js";
 import { narrationScripts } from "./narration.js";
 import { createStageEffects } from "./effects.js";
+import { createAmbience } from "./ambience.js";
 
 const ERA_DEFS = [
   {
@@ -123,12 +124,19 @@ const events = rawEvents
 
 const byId = new Map(events.map((event) => [event.id, event]));
 const stageEffects = createStageEffects(document.querySelector("#stage-effects"));
+const ambience = createAmbience();
+
+// Browsers require a user gesture before audio can start.
+["pointerdown", "keydown"].forEach((type) =>
+  document.addEventListener(type, () => ambience.unlock(), { once: true, capture: true })
+);
 
 state.activeId = events[0].id;
 
 renderPreview();
 renderFilters();
 render();
+updateSoundLabel();
 
 const params = new URLSearchParams(window.location.search);
 if (window.location.hash === "#experience" || params.get("view") === "experience") {
@@ -148,6 +156,7 @@ document.addEventListener("click", (event) => {
   if (action === "bookmark") toggleBookmark();
   if (action === "copy-cite") copyCitation();
   if (action === "show-map") showToast("Map mode is represented by the atlas path overlay on each event stage.");
+  if (action === "toggle-sound") toggleAmbience();
   if (action === "toggle-bookmarks") toggleBookmarkFilter();
   if (action === "focus-stage") toggleFocusMode();
 });
@@ -170,12 +179,14 @@ window.addEventListener("keydown", (event) => {
 function setMode(mode) {
   app.dataset.mode = mode;
   if (mode === "experience") {
+    ambience.setActive(true);
     requestAnimationFrame(() => {
       document.querySelector(".timeline-event.active")?.scrollIntoView({ block: "nearest" });
       stageEffects.setScene(activeEvent().id);
     });
   } else {
     setPlaying(false);
+    ambience.setActive(false);
   }
 }
 
@@ -338,6 +349,7 @@ function renderStage(event) {
 
   image.alt = `${event.name} historical scene`;
   stageEffects.setScene(event.id);
+  ambience.setScene(event.id);
 }
 
 function renderDossier(event) {
@@ -455,6 +467,7 @@ function stopNarration() {
   narrationToken += 1;
   narrationUtterance = null;
   narrationAudio.pause();
+  ambience.duck(false);
   if (narrationStatus) narrationStatus.textContent = "Narration paused.";
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
@@ -465,6 +478,7 @@ function narrateActiveEvent() {
   const event = activeEvent();
   clearPlaybackTimers();
   stopNarration();
+  ambience.duck(true);
   const token = narrationToken;
   if (narrationStatus) narrationStatus.textContent = `Narrating ${event.name}.`;
 
@@ -579,6 +593,23 @@ function toggleBookmarkFilter() {
   state.filter = "all";
   renderTimeline();
   showToast(state.bookmarkOnly ? "Showing bookmarked milestones." : "Showing all milestones.");
+}
+
+function toggleAmbience() {
+  ambience.setEnabled(!ambience.enabled);
+  updateSoundLabel();
+  showToast(ambience.enabled ? "Ambient sound on." : "Ambient sound off.");
+}
+
+function updateSoundLabel() {
+  const label = document.querySelector("#sound-label");
+  if (label) label.textContent = ambience.enabled ? "Sound On" : "Sound Off";
+
+  const control = document.querySelector("#sound-toggle");
+  if (control) {
+    control.setAttribute("aria-pressed", String(ambience.enabled));
+    control.setAttribute("aria-label", `Ambient sound ${ambience.enabled ? "on" : "off"}`);
+  }
 }
 
 function toggleFocusMode() {
