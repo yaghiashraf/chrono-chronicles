@@ -109,6 +109,16 @@ a {
   position: absolute;
   object-fit: cover;
   filter: saturate(0.82) contrast(1.08);
+  animation: introDrift 34s ease-in-out infinite alternate;
+}
+
+.intro-relief {
+  animation-duration: 42s;
+  animation-direction: alternate-reverse;
+}
+
+.intro-harbor {
+  animation-duration: 38s;
 }
 
 .intro-cosmos {
@@ -702,22 +712,43 @@ a {
 }
 
 .stage-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   filter: saturate(0.84) contrast(1.08) brightness(0.78);
   transform: scale(1.02);
-  transition: opacity 260ms ease, transform 900ms ease;
 }
 
-.stage-image-wrap.is-changing .stage-image {
-  opacity: 0.56;
-  transform: scale(1.06);
+.stage-image.kb-a {
+  animation: kenBurnsA 26s ease-in-out infinite alternate;
+}
+
+.stage-image.kb-b {
+  animation: kenBurnsB 26s ease-in-out infinite alternate;
+}
+
+.stage-image-prev {
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+}
+
+.stage-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .stage-image-wrap::after {
   position: absolute;
   inset: 0;
+  z-index: 2;
   content: "";
   background:
     linear-gradient(180deg, rgba(5, 5, 5, 0.08), rgba(5, 5, 5, 0.18) 40%, rgba(5, 5, 5, 0.94) 100%),
@@ -727,6 +758,7 @@ a {
 .map-overlay {
   position: absolute;
   inset: 0;
+  z-index: 2;
   opacity: 0.74;
   mix-blend-mode: screen;
 }
@@ -746,10 +778,6 @@ a {
 
 .experience.is-playing .map-overlay path {
   animation: routeTrace 3600ms linear infinite;
-}
-
-.experience.is-playing .stage-image {
-  animation: cinematicDrift 16000ms ease-in-out infinite alternate;
 }
 
 .experience.is-playing .map-overlay circle {
@@ -1321,12 +1349,30 @@ a {
   }
 }
 
-@keyframes cinematicDrift {
+@keyframes introDrift {
   from {
     transform: scale(1.02) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.08) translate3d(-1.6%, -1.2%, 0);
+    transform: scale(1.09) translate3d(-1.2%, 1%, 0);
+  }
+}
+
+@keyframes kenBurnsA {
+  from {
+    transform: scale(1.04) translate3d(0.8%, 0.6%, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(-1.4%, -1.1%, 0);
+  }
+}
+
+@keyframes kenBurnsB {
+  from {
+    transform: scale(1.12) translate3d(-1.2%, 0.8%, 0);
+  }
+  to {
+    transform: scale(1.04) translate3d(1%, -0.7%, 0);
   }
 }
 

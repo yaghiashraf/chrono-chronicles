@@ -1,5 +1,7 @@
 import { rawEvents } from "./events.js";
 import { eventInsights } from "./insights.js";
+import { narrationScripts } from "./narration.js";
+import { createStageEffects } from "./effects.js";
 
 const ERA_DEFS = [
   {
@@ -78,6 +80,12 @@ let autoplayTimer = null;
 let narrationUtterance = null;
 let narrationAdvanceTimer = null;
 let narrationVoices = [];
+let narrationToken = 0;
+let preloadedAudio = null;
+let kenBurnsAlternate = false;
+
+const narrationAudio = new Audio();
+narrationAudio.preload = "auto";
 
 const app = document.querySelector(".app");
 const experience = document.querySelector("#experience");
@@ -104,6 +112,8 @@ const events = rawEvents
       displayYear: formatYear(event.year),
       sortYear: parseYear(event.year),
       imagePath: `./assets/history/${event.id}.png`,
+      audioPath: `./assets/narration/${event.id}.mp3`,
+      script: narrationScripts[event.id] ?? event.description,
       insight: eventInsights[event.id] ?? "Why it matters: this milestone changed the conditions for the events that followed.",
       theme: themeFor(event.id),
     };
@@ -112,6 +122,7 @@ const events = rawEvents
   .map((event, index) => ({ ...event, index }));
 
 const byId = new Map(events.map((event) => [event.id, event]));
+const stageEffects = createStageEffects(document.querySelector("#stage-effects"));
 
 state.activeId = events[0].id;
 
@@ -161,6 +172,7 @@ function setMode(mode) {
   if (mode === "experience") {
     requestAnimationFrame(() => {
       document.querySelector(".timeline-event.active")?.scrollIntoView({ block: "nearest" });
+      stageEffects.setEffect(activeEvent().effectType);
     });
   } else {
     setPlaying(false);
@@ -287,18 +299,45 @@ function renderStage(event) {
   document.querySelector("#stage-era").textContent = event.era.name;
   document.querySelector("#event-title").textContent = event.name;
   document.querySelector("#event-year").textContent = event.displayYear;
-  document.querySelector("#event-summary").textContent = `${firstSentences(event.description, 2)} ${event.insight.replace("Why it matters: ", "")}`;
+  document.querySelector("#event-summary").textContent = firstSentences(event.script, 3);
 
   const image = document.querySelector("#stage-image");
+  const prev = document.querySelector("#stage-image-prev");
   const wrap = document.querySelector(".stage-image-wrap");
-  wrap.classList.add("is-changing");
-  image.src = event.imagePath;
+  const changing = !image.src.endsWith(event.imagePath.slice(1));
+
+  if (changing) {
+    wrap.classList.add("is-changing");
+
+    // Hold the outgoing frame on the overlay layer, then fade it out once the
+    // incoming image has painted.
+    prev.src = image.src;
+    prev.style.transition = "none";
+    prev.style.opacity = "1";
+
+    kenBurnsAlternate = !kenBurnsAlternate;
+    image.classList.toggle("kb-a", !kenBurnsAlternate);
+    image.classList.toggle("kb-b", kenBurnsAlternate);
+
+    const fadeOut = () => {
+      requestAnimationFrame(() => {
+        prev.style.transition = "opacity 760ms ease";
+        prev.style.opacity = "0";
+      });
+    };
+    image.onload = fadeOut;
+    image.onerror = () => {
+      image.onerror = null;
+      image.src = "./assets/history/big_bang.png";
+      fadeOut();
+    };
+    image.src = event.imagePath;
+    if (image.complete) fadeOut();
+    window.setTimeout(() => wrap.classList.remove("is-changing"), 560);
+  }
+
   image.alt = `${event.name} historical scene`;
-  image.onerror = () => {
-    image.onerror = null;
-    image.src = "./assets/history/big_bang.png";
-  };
-  window.setTimeout(() => wrap.classList.remove("is-changing"), 180);
+  stageEffects.setEffect(event.effectType);
 }
 
 function renderDossier(event) {
@@ -413,7 +452,9 @@ function clearPlaybackTimers() {
 }
 
 function stopNarration() {
+  narrationToken += 1;
   narrationUtterance = null;
+  narrationAudio.pause();
   if (narrationStatus) narrationStatus.textContent = "Narration paused.";
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
@@ -422,9 +463,38 @@ function stopNarration() {
 
 function narrateActiveEvent() {
   const event = activeEvent();
-  const text = narrationText(event);
   clearPlaybackTimers();
+  stopNarration();
+  const token = narrationToken;
   if (narrationStatus) narrationStatus.textContent = `Narrating ${event.name}.`;
+
+  narrationAudio.onended = () => {
+    if (token !== narrationToken || !state.playing) return;
+    clearPlaybackTimers();
+    narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, 900);
+  };
+  narrationAudio.onerror = () => {
+    if (token !== narrationToken || !state.playing) return;
+    speakFallback(event, token);
+  };
+
+  narrationAudio.src = event.audioPath;
+  narrationAudio.playbackRate = 1;
+  narrationAudio.play().catch(() => {
+    if (token === narrationToken && state.playing) speakFallback(event, token);
+  });
+
+  // Warm the cache for the next milestone so autoplay never stutters.
+  const next = events[event.index + 1];
+  if (next) {
+    preloadedAudio = new Audio();
+    preloadedAudio.preload = "auto";
+    preloadedAudio.src = next.audioPath;
+  }
+}
+
+function speakFallback(event, token) {
+  const text = narrationText(event);
 
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
     narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text));
@@ -436,19 +506,19 @@ function narrateActiveEvent() {
     const utterance = new SpeechSynthesisUtterance(text);
     const voice = chooseNarrationVoice();
     if (voice) utterance.voice = voice;
-    utterance.rate = 0.86;
-    utterance.pitch = 0.95;
+    utterance.rate = 0.88;
+    utterance.pitch = 0.78;
     utterance.volume = 1;
     narrationUtterance = utterance;
 
     utterance.onend = () => {
-      if (narrationUtterance !== utterance || !state.playing) return;
+      if (token !== narrationToken || narrationUtterance !== utterance || !state.playing) return;
       clearPlaybackTimers();
       advanceNarratedJourney();
     };
 
     utterance.onerror = () => {
-      if (narrationUtterance !== utterance || !state.playing) return;
+      if (token !== narrationToken || narrationUtterance !== utterance || !state.playing) return;
       clearPlaybackTimers();
       narrationAdvanceTimer = window.setTimeout(advanceNarratedJourney, estimatedNarrationMs(text));
     };
@@ -470,8 +540,7 @@ function advanceNarratedJourney() {
 }
 
 function narrationText(event) {
-  const insight = event.insight.replace(/^Why it matters:\s*/i, "");
-  return `${event.name}. ${event.displayYear}. ${firstSentences(event.description, 1)} Why it matters: ${insight}`;
+  return `${event.name}. ${event.script}`;
 }
 
 function estimatedNarrationMs(text) {
@@ -480,10 +549,13 @@ function estimatedNarrationMs(text) {
 }
 
 function chooseNarrationVoice() {
-  const voices = narrationVoices.length ? narrationVoices : window.speechSynthesis.getVoices();
+  const voices = (narrationVoices.length ? narrationVoices : window.speechSynthesis.getVoices()).filter((voice) =>
+    /^en/i.test(voice.lang)
+  );
+  // Prefer known deep, warm male voices for the documentary tone.
   return (
-    voices.find((voice) => /natural|premium|enhanced/i.test(voice.name) && /^en/i.test(voice.lang)) ??
-    voices.find((voice) => /^en/i.test(voice.lang)) ??
+    voices.find((voice) => /andrew|christopher|guy|davis|daniel|george|onyx/i.test(voice.name)) ??
+    voices.find((voice) => /natural|premium|enhanced|neural/i.test(voice.name)) ??
     voices[0] ??
     null
   );
