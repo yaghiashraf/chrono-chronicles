@@ -155,7 +155,7 @@ document.addEventListener("click", (event) => {
   if (action === "play") setPlaying(!state.playing);
   if (action === "bookmark") toggleBookmark();
   if (action === "copy-cite") copyCitation();
-  if (action === "show-map") showToast("Map mode is represented by the atlas path overlay on each event stage.");
+  if (action === "show-map") toggleStageMap(control);
   if (action === "toggle-sound") toggleAmbience();
   if (action === "toggle-bookmarks") toggleBookmarkFilter();
   if (action === "focus-stage") toggleFocusMode();
@@ -197,6 +197,13 @@ function render() {
   renderDossier(active);
   renderScrubber();
   updatePlayButton();
+}
+
+function toggleStageMap(control) {
+  const stage = document.querySelector(".event-stage");
+  const showing = stage.classList.toggle("showing-map");
+  control.setAttribute("aria-pressed", String(showing));
+  showToast(showing ? "Atlas path enabled for this stage." : "Atlas path hidden so the scene can take focus.");
 }
 
 function renderPreview() {
