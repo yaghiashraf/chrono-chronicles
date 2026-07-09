@@ -61,8 +61,8 @@ const eraLookup = new Map();
 ERA_DEFS.forEach((era) => era.ids.forEach((id) => eraLookup.set(id, era)));
 
 const STORAGE_KEY = "chrono-chronicles-overhaul:v1";
-const MIN_NARRATION_MS = 9000;
-const MAX_NARRATION_MS = 18000;
+const MIN_NARRATION_MS = 12000;
+const MAX_NARRATION_MS = 32000;
 const previewIds = ["big_bang", "agriculture", "democracy", "constantinople", "ww1", "hormuz"];
 
 const state = {
@@ -436,8 +436,8 @@ function narrateActiveEvent() {
     const utterance = new SpeechSynthesisUtterance(text);
     const voice = chooseNarrationVoice();
     if (voice) utterance.voice = voice;
-    utterance.rate = 0.9;
-    utterance.pitch = 0.92;
+    utterance.rate = 0.86;
+    utterance.pitch = 0.95;
     utterance.volume = 1;
     narrationUtterance = utterance;
 
@@ -476,7 +476,7 @@ function narrationText(event) {
 
 function estimatedNarrationMs(text) {
   const words = text.trim().split(/\s+/).length;
-  return Math.max(MIN_NARRATION_MS, Math.min(MAX_NARRATION_MS, words * 360));
+  return Math.max(MIN_NARRATION_MS, Math.min(MAX_NARRATION_MS, words * 430));
 }
 
 function chooseNarrationVoice() {

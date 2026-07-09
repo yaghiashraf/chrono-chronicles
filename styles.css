@@ -537,12 +537,25 @@ a {
 
 .filter-row {
   display: flex;
+  align-items: center;
   gap: 8px;
+  min-height: 44px;
+  max-height: 44px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  overflow-y: hidden;
+  padding: 2px 0 6px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 24px), transparent 100%);
+}
+
+.filter-row::-webkit-scrollbar {
+  display: none;
 }
 
 .filter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 36px;
   flex: 0 0 auto;
   padding: 0 12px;
@@ -621,6 +634,10 @@ a {
   background: linear-gradient(90deg, rgba(98, 196, 183, 0.16), rgba(200, 115, 60, 0.12));
   color: var(--ink);
   box-shadow: inset 3px 0 var(--copper-strong);
+}
+
+.experience.is-playing .timeline-event.active {
+  animation: activeEventBeat 2200ms ease-in-out infinite;
 }
 
 .timeline-empty {
@@ -729,6 +746,16 @@ a {
 
 .experience.is-playing .map-overlay path {
   animation: routeTrace 3600ms linear infinite;
+}
+
+.experience.is-playing .stage-image {
+  animation: cinematicDrift 16000ms ease-in-out infinite alternate;
+}
+
+.experience.is-playing .map-overlay circle {
+  animation: mapPulse 2400ms ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .map-overlay circle {
@@ -855,6 +882,12 @@ a {
   transition: width 260ms ease;
 }
 
+.experience.is-playing .reading-meter div span {
+  background: linear-gradient(90deg, var(--copper-strong), var(--gold), var(--teal));
+  background-size: 220% 100%;
+  animation: meterFlow 2600ms linear infinite;
+}
+
 .dossier-copy {
   margin: 24px 0 0;
   color: #e8dfd1;
@@ -926,6 +959,7 @@ a {
 }
 
 .play-button {
+  position: relative;
   display: grid;
   width: 70px;
   height: 70px;
@@ -939,6 +973,15 @@ a {
 
 .play-button.is-playing {
   animation: playPulse 1800ms ease-in-out infinite;
+}
+
+.play-button.is-playing::before {
+  position: absolute;
+  inset: -12px;
+  border: 1px solid rgba(226, 139, 79, 0.26);
+  border-radius: 50%;
+  content: "";
+  animation: playOrbit 3200ms linear infinite;
 }
 
 .play-button svg {
@@ -1278,6 +1321,27 @@ a {
   }
 }
 
+@keyframes cinematicDrift {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-1.6%, -1.2%, 0);
+  }
+}
+
+@keyframes mapPulse {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.85);
+  }
+}
+
 @keyframes stageTextIn {
   from {
     opacity: 0.7;
@@ -1289,6 +1353,27 @@ a {
   }
 }
 
+@keyframes activeEventBeat {
+  0%,
+  100% {
+    border-color: rgba(226, 139, 79, 0.9);
+    box-shadow: inset 3px 0 var(--copper-strong), 0 0 0 rgba(98, 196, 183, 0);
+  }
+  50% {
+    border-color: rgba(98, 196, 183, 0.82);
+    box-shadow: inset 3px 0 var(--teal), 0 0 24px rgba(98, 196, 183, 0.12);
+  }
+}
+
+@keyframes meterFlow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 220% 0;
+  }
+}
+
 @keyframes playPulse {
   0%,
   100% {
@@ -1296,5 +1381,16 @@ a {
   }
   50% {
     box-shadow: 0 18px 54px rgba(200, 115, 60, 0.34), 0 0 0 12px rgba(226, 139, 79, 0);
+  }
+}
+
+@keyframes playOrbit {
+  from {
+    opacity: 0.9;
+    transform: rotate(0deg) scale(0.95);
+  }
+  to {
+    opacity: 0.2;
+    transform: rotate(360deg) scale(1.12);
   }
 }
