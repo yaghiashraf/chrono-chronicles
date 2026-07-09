@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chrono Chronicles</title>
+    <meta
+      name="description"
+      content="An interactive historical atlas from the Big Bang to the Hormuz blockade."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app" data-mode="intro">
+      <section class="intro" id="intro" aria-labelledby="intro-title">
+        <div class="intro-collage" aria-hidden="true">
+          <img class="intro-image intro-cosmos" src="./assets/history/big_bang.png" alt="" />
+          <img class="intro-image intro-relief" src="./assets/history/babylon.png" alt="" />
+          <img class="intro-image intro-harbor" src="./assets/history/hormuz.png" alt="" />
+          <div class="atlas-disc"></div>
+          <div class="atlas-thread">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+
+        <header class="intro-topbar">
+          <a class="brand-mark" href="#intro" aria-label="Chrono Chronicles home">
+            <span class="brand-sigil" aria-hidden="true"></span>
+            <span>Chrono Chronicles</span>
+          </a>
+          <p class="credit">Created by <strong>Wadih Absi</strong></p>
+        </header>
+
+        <div class="intro-copy">
+          <h1 id="intro-title">Walk the world's turning points</h1>
+          <p>
+            Travel from cosmic origins to the Hormuz blockade through civilization,
+            belief, science, war, and the forces that shape modern power.
+          </p>
+          <div class="intro-actions" aria-label="Start controls">
+            <button class="button primary" type="button" data-action="start">
+              Begin Journey
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+            <button class="button ghost" type="button" data-action="start">
+              Open Timeline
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 7h14M5 12h14M5 17h14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="preview-band" aria-label="Timeline preview">
+          <div class="preview-label">
+            <span>A timeline of humanity</span>
+            <strong>75 milestones</strong>
+          </div>
+          <div class="preview-events" id="preview-events"></div>
+        </div>
+      </section>
+
+      <main class="experience" id="experience" aria-label="Chrono Chronicles timeline">
+        <header class="app-topbar">
+          <a class="brand-mark" href="#intro" data-action="home">
+            <span class="brand-sigil" aria-hidden="true"></span>
+            <span>Chrono Chronicles</span>
+          </a>
+          <p class="credit">Created by <strong>Wadih Absi</strong></p>
+          <nav class="top-actions" aria-label="Timeline utilities">
+            <button class="icon-button" type="button" data-action="show-map" title="World map">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2V6zM9 4v14M15 6v14" />
+              </svg>
+              <span>World Map</span>
+            </button>
+            <button class="icon-button" type="button" data-action="toggle-bookmarks" title="Bookmarks">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4h10v16l-5-3-5 3V4z" />
+              </svg>
+              <span>Bookmarks</span>
+            </button>
+          </nav>
+        </header>
+
+        <section class="timeline-rail" aria-label="Milestone navigation">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10.5 18a7.5 7.5 0 1 1 5.3-2.2L21 21" />
+            </svg>
+            <input id="search-input" type="search" placeholder="Search milestones..." autocomplete="off" />
+          </label>
+          <div class="filter-row" id="filter-row" aria-label="Era filters"></div>
+          <div class="timeline-list" id="timeline-list"></div>
+        </section>
+
+        <section class="event-stage" aria-labelledby="event-title">
+          <div class="stage-toolbar">
+            <span id="event-counter">1 / 75</span>
+            <div class="stage-tool-buttons">
+              <button class="tool-button" type="button" data-action="focus-stage" title="Focus stage">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5" />
+                </svg>
+              </button>
+              <button class="tool-button" type="button" data-action="copy-cite" title="Copy citation">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 9h10v10H9zM5 15H4V4h11v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="stage-image-wrap">
+            <img id="stage-image" class="stage-image" src="./assets/history/big_bang.png" alt="" />
+            <div class="map-overlay" aria-hidden="true">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M4 68 C22 53, 37 74, 50 48 S75 32, 96 23" />
+                <circle cx="50" cy="48" r="2.4" />
+                <circle cx="76" cy="32" r="1.6" />
+              </svg>
+            </div>
+            <div class="stage-text">
+              <p class="stage-era" id="stage-era">Cosmic Origins</p>
+              <h2 id="event-title">The Big Bang</h2>
+              <p class="event-year" id="event-year">13.8B BCE</p>
+              <p class="event-summary" id="event-summary"></p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="dossier" aria-label="Event dossier">
+          <div class="dossier-head">
+            <span>Dossier</span>
+            <p id="dossier-position">Event 1 of 75</p>
+          </div>
+          <p class="dossier-path" id="dossier-path">Cosmic Origins / Creation, Space, Time</p>
+          <h2 id="dossier-title">The Big Bang</h2>
+          <p class="dossier-year" id="dossier-year">13.8B BCE</p>
+
+          <div class="reading-meter">
+            <span id="reading-label">Narrative 1 of 1</span>
+            <span id="reading-time">~ 2 min read</span>
+            <div><span id="reading-progress"></span></div>
+          </div>
+
+          <p class="dossier-copy" id="dossier-copy"></p>
+          <div class="dossier-insight" id="dossier-insight">
+            <span>Why it matters</span>
+            <p id="dossier-insight-copy"></p>
+          </div>
+          <dl class="fact-list" id="fact-list"></dl>
+
+          <div class="player-controls" aria-label="Timeline controls">
+            <button class="control-button" type="button" data-action="previous">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+              Previous
+            </button>
+            <button class="play-button" type="button" data-action="play" aria-label="Play timeline">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <button class="control-button" type="button" data-action="next">
+              Next
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="secondary-actions">
+            <button type="button" data-action="bookmark">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4h10v16l-5-3-5 3V4z" />
+              </svg>
+              <span id="bookmark-label">Bookmark</span>
+            </button>
+            <button type="button" data-action="copy-cite">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 7h10M7 12h7M7 17h5" />
+              </svg>
+              Cite
+            </button>
+          </div>
+        </aside>
+
+        <nav class="era-scrubber" id="era-scrubber" aria-label="Era scrubber"></nav>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
