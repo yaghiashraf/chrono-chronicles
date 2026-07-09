@@ -1,11 +1,61 @@
-// Synthesized ambient soundscapes, one recipe per event. Everything is
-// generated live with Web Audio (no audio files) and mixed well below the
-// narration, which additionally ducks the ambience while speaking.
+// Real field-recording beds plus synthesised accents, one recipe per event.
+// Every layer is mixed well below the narration, which additionally ducks the
+// ambience while speaking.
 
 const MASTER_LEVEL = 0.16;
 const DUCK_FACTOR = 0.38;
 const FADE_IN = 1.6;
 const FADE_OUT = 1.1;
+const BED_LEVEL = 0.34;
+
+// These real field recordings carry the scene. The procedural layers below
+// remain as small, event-specific accents rather than the whole soundscape.
+const BED_SOURCES = {
+  fire: "./assets/ambience/fire.mp3",
+  forest: "./assets/ambience/forest.mp3",
+  storm: "./assets/ambience/storm.mp3",
+  war: "./assets/ambience/war.mp3",
+  waves: "./assets/ambience/waves.mp3",
+};
+
+const BED_BY_EVENT = {
+  earth_formation: "fire",
+  first_life: "waves",
+  cambrian: "waves",
+  great_dying: "storm",
+  dinosaurs: "storm",
+  mammals: "forest",
+  lucy: "forest",
+  ice_age: "storm",
+  fire: "fire",
+  cavemen: "fire",
+  agriculture: "forest",
+  troy: "war",
+  bronze_collapse: "fire",
+  marathon: "war",
+  alexander: "war",
+  qin: "war",
+  caesar: "war",
+  pompeii: "fire",
+  rome_fall: "war",
+  hastings: "war",
+  mongols: "war",
+  jerusalem: "fire",
+  crusades: "war",
+  constantinople: "war",
+  vikings: "waves",
+  black_death: "storm",
+  columbus: "waves",
+  pirates: "waves",
+  revolution: "war",
+  titanic: "waves",
+  ww1: "storm",
+  ww2: "war",
+  challenger: "storm",
+  sept_11: "storm",
+  ukraine: "war",
+  hormuz: "war",
+};
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -38,6 +88,7 @@ export function createAmbience() {
   let duckGain = null;
   const noise = {};
   let scene = null; // { gain, stops, timers, alive }
+  let bed = null; // { key, audio, source, gain }
   let sceneId = null;
   let enabled = loadEnabled();
   let ducked = false;
@@ -107,6 +158,49 @@ export function createAmbience() {
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak), now + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
+  }
+
+  function stopBed(old = bed) {
+    if (!old || !ctx) return;
+    const now = ctx.currentTime;
+    old.gain.gain.cancelScheduledValues(now);
+    old.gain.gain.setValueAtTime(old.gain.gain.value, now);
+    old.gain.gain.linearRampToValueAtTime(0, now + FADE_OUT);
+    setTimeout(() => {
+      old.audio.pause();
+      try { old.source.disconnect(); } catch { /* detached */ }
+      try { old.gain.disconnect(); } catch { /* detached */ }
+    }, (FADE_OUT + 0.2) * 1000);
+  }
+
+  function syncBed(id) {
+    const key = BED_BY_EVENT[id];
+    if (bed?.key === key) return;
+
+    const oldBed = bed;
+    bed = null;
+    if (oldBed) stopBed(oldBed);
+    if (!key) return;
+
+    const audio = new Audio(BED_SOURCES[key]);
+    const source = ctx.createMediaElementSource(audio);
+    const gain = ctx.createGain();
+    audio.loop = true;
+    audio.preload = "auto";
+    audio.playsInline = true;
+    gain.gain.value = 0;
+    source.connect(gain);
+    gain.connect(duckGain);
+
+    const nextBed = { key, audio, source, gain };
+    bed = nextBed;
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(BED_LEVEL, now + FADE_IN);
+    audio.play().catch(() => {
+      // The synthesised accent layer remains available if a browser blocks a
+      // media element before the first user gesture.
+    });
   }
 
   /* --------------------------------------------------------- generators */
@@ -623,6 +717,7 @@ export function createAmbience() {
     stopScene(scene);
     scene = null;
     startScene(sceneId);
+    syncBed(sceneId);
   }
 
   /* -------------------------------------------------------------- public */
@@ -636,9 +731,11 @@ export function createAmbience() {
       active = on;
       if (on) {
         play();
-      } else if (scene) {
-        stopScene(scene);
+      } else {
+        if (scene) stopScene(scene);
+        if (bed) stopBed(bed);
         scene = null;
+        bed = null;
       }
     },
     unlock() {
@@ -661,7 +758,9 @@ export function createAmbience() {
       } catch { /* private mode */ }
       if (!on) {
         stopScene(scene);
+        stopBed(bed);
         scene = null;
+        bed = null;
       } else {
         play();
       }
