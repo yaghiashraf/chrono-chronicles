@@ -35,7 +35,8 @@ http://127.0.0.1:4173/
   `pip install edge-tts` then run a loop over the scripts with those settings.
 - If an MP3 fails to load, the app falls back to browser `speechSynthesis`
   with a deep-male voice preference.
-- `effects.js` renders canvas particle overlays on the stage, driven by each
-  event's `effectType` (`fire`, `smoke`, `ash`, `rain`, `snow`, `starburst`,
-  `matrix`; `none` gets ambient dust). Disabled under
-  `prefers-reduced-motion`.
+- `effects.js` is a canvas scene engine with ~19 layer primitives (particles,
+  glow, beams, waves, aurora, ticker, helix, network, bursts, ...).
+  `scenes.js` composes them into a unique, topical animation for each of the
+  75 events (e.g. aurora for `vikings`, scrolling helix for `dna`, tribute
+  beams for `sept_11`). Disabled under `prefers-reduced-motion`.

@@ -172,7 +172,7 @@ function setMode(mode) {
   if (mode === "experience") {
     requestAnimationFrame(() => {
       document.querySelector(".timeline-event.active")?.scrollIntoView({ block: "nearest" });
-      stageEffects.setEffect(activeEvent().effectType);
+      stageEffects.setScene(activeEvent().id);
     });
   } else {
     setPlaying(false);
@@ -337,7 +337,7 @@ function renderStage(event) {
   }
 
   image.alt = `${event.name} historical scene`;
-  stageEffects.setEffect(event.effectType);
+  stageEffects.setScene(event.id);
 }
 
 function renderDossier(event) {
