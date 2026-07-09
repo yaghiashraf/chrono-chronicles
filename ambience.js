@@ -360,6 +360,124 @@ export function createAmbience() {
         });
       });
     },
+    artillery(s, out, o) {
+      every(s, o.interval ?? [6, 13], () => {
+        const now = ctx.currentTime;
+        const blast = noiseSource("brown");
+        const low = ctx.createBiquadFilter();
+        low.type = "lowpass";
+        low.frequency.value = o.freq ?? rand(110, 190);
+        const blastGain = ctx.createGain();
+        blast.connect(low); low.connect(blastGain); blastGain.connect(out);
+        envelope(blastGain, o.level * rand(0.72, 1), 0.012, rand(1.1, 2.1));
+
+        const sub = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        sub.type = "sine";
+        sub.frequency.setValueAtTime(o.pitch ?? rand(58, 76), now);
+        sub.frequency.exponentialRampToValueAtTime(rand(29, 39), now + 0.8);
+        sub.connect(subGain); subGain.connect(out);
+        sub.start(now);
+        envelope(subGain, o.level * 0.48, 0.008, 0.95);
+        setTimeout(() => {
+          blast.stop();
+          sub.stop();
+        }, 2600);
+      });
+    },
+    gunfire(s, out, o) {
+      every(s, o.interval ?? [2.3, 5.8], () => {
+        const rounds = Math.floor(rand(o.rounds?.[0] ?? 2, (o.rounds?.[1] ?? 5) + 1));
+        for (let i = 0; i < rounds; i += 1) {
+          const t0 = ctx.currentTime + i * rand(0.07, 0.19);
+          const crack = noiseSource("white");
+          const band = ctx.createBiquadFilter();
+          band.type = "bandpass";
+          band.frequency.value = rand(1_250, 2_800);
+          band.Q.value = 1.6;
+          const crackGain = ctx.createGain();
+          crack.connect(band); band.connect(crackGain); crackGain.connect(out);
+          crackGain.gain.setValueAtTime(0.0001, t0);
+          crackGain.gain.exponentialRampToValueAtTime(o.level * rand(0.52, 1), t0 + 0.003);
+          crackGain.gain.exponentialRampToValueAtTime(0.0001, t0 + rand(0.035, 0.075));
+          setTimeout(() => crack.stop(), (t0 - ctx.currentTime + 0.25) * 1000);
+        }
+      });
+    },
+    march(s, out, o) {
+      every(s, o.interval ?? [1.6, 2.5], () => {
+        const steps = o.steps ?? 4;
+        for (let i = 0; i < steps; i += 1) {
+          const t0 = ctx.currentTime + i * (o.spacing ?? 0.24);
+          const step = ctx.createOscillator();
+          const stepGain = ctx.createGain();
+          step.type = "triangle";
+          step.frequency.setValueAtTime(i % 2 ? 72 : 62, t0);
+          step.frequency.exponentialRampToValueAtTime(36, t0 + 0.13);
+          step.connect(stepGain); stepGain.connect(out);
+          step.start(t0);
+          stepGain.gain.setValueAtTime(0.0001, t0);
+          stepGain.gain.exponentialRampToValueAtTime(o.level * (i % 2 ? 0.72 : 1), t0 + 0.01);
+          stepGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.17);
+          step.stop(t0 + 0.22);
+        }
+      });
+    },
+    battleCry(s, out, o) {
+      every(s, o.interval ?? [8, 16], () => {
+        const calls = Math.floor(rand(1, 4));
+        for (let i = 0; i < calls; i += 1) {
+          const t0 = ctx.currentTime + i * rand(0.18, 0.42);
+          const voice = ctx.createOscillator();
+          const formant = ctx.createBiquadFilter();
+          const voiceGain = ctx.createGain();
+          voice.type = "sawtooth";
+          voice.frequency.setValueAtTime(rand(125, 205), t0);
+          voice.frequency.exponentialRampToValueAtTime(rand(185, 310), t0 + 0.16);
+          formant.type = "bandpass";
+          formant.frequency.value = rand(680, 1_050);
+          formant.Q.value = 3.2;
+          voice.connect(formant); formant.connect(voiceGain); voiceGain.connect(out);
+          voice.start(t0);
+          voiceGain.gain.setValueAtTime(0.0001, t0);
+          voiceGain.gain.exponentialRampToValueAtTime(o.level * rand(0.5, 1), t0 + 0.035);
+          voiceGain.gain.exponentialRampToValueAtTime(0.0001, t0 + rand(0.22, 0.48));
+          voice.stop(t0 + 0.55);
+        }
+      });
+    },
+    siren(s, out, o) {
+      every(s, o.interval ?? [14, 24], () => {
+        const now = ctx.currentTime;
+        const siren = ctx.createOscillator();
+        const sirenGain = ctx.createGain();
+        siren.type = "triangle";
+        siren.frequency.setValueAtTime(o.low ?? 430, now);
+        siren.frequency.linearRampToValueAtTime(o.high ?? 740, now + 0.85);
+        siren.frequency.linearRampToValueAtTime(o.low ?? 430, now + 1.7);
+        siren.frequency.linearRampToValueAtTime(o.high ?? 740, now + 2.55);
+        siren.frequency.linearRampToValueAtTime(o.low ?? 430, now + 3.4);
+        siren.connect(sirenGain); sirenGain.connect(out);
+        siren.start(now);
+        envelope(sirenGain, o.level, 0.08, 3.6);
+        setTimeout(() => siren.stop(), 3900);
+      });
+    },
+    horn(s, out, o) {
+      every(s, o.interval ?? [13, 24], () => {
+        const now = ctx.currentTime;
+        [1, 2.01].forEach((mult, i) => {
+          const horn = ctx.createOscillator();
+          const hornGain = ctx.createGain();
+          horn.type = "sawtooth";
+          horn.frequency.value = (o.freq ?? 118) * mult;
+          horn.connect(hornGain); hornGain.connect(out);
+          horn.start(now);
+          envelope(hornGain, o.level * (i ? 0.22 : 1), 0.08, 1.8);
+          setTimeout(() => horn.stop(), 2200);
+        });
+      });
+    },
   };
 
   /* ------------------------------------------------------------ recipes */
@@ -380,6 +498,12 @@ export function createAmbience() {
   const HB = (level, o = {}) => ({ g: "heartbeat", level, ...o });
   const PI = (level, o = {}) => ({ g: "ping", level, ...o });
   const RA = (level, o = {}) => ({ g: "rain", level, ...o });
+  const AR = (level, o = {}) => ({ g: "artillery", level, ...o });
+  const GF = (level, o = {}) => ({ g: "gunfire", level, ...o });
+  const MC = (level, o = {}) => ({ g: "march", level, ...o });
+  const BC = (level, o = {}) => ({ g: "battleCry", level, ...o });
+  const SI = (level, o = {}) => ({ g: "siren", level, ...o });
+  const HO = (level, o = {}) => ({ g: "horn", level, ...o });
 
   const DRUMS = (level) => MA(level, { interval: [1.1, 1.4], hiss: false });
 
@@ -401,22 +525,22 @@ export function createAmbience() {
     pyramids: [W(0.5, { freq: 520, speed: 0.06 }), CR(0.16)],
     egypt: [W(0.35, { freq: 480 }), DR(0.22, [110, 165]), CR(0.14)],
     babylon: [CR(0.3), W(0.25), BE(0.1, { freq: 620, interval: [12, 22] })],
-    troy: [FI(0.4), CR(0.3, { freq: 420 }), DRUMS(0.14)],
-    bronze_collapse: [W(0.4), RU(0.35), FI(0.22, { crackle: [0.3, 0.9] })],
+    troy: [FI(0.3), BC(0.11, { interval: [7, 13] }), MC(0.08), DRUMS(0.1)],
+    bronze_collapse: [W(0.32), RU(0.25), FI(0.18, { crackle: [0.3, 0.9] }), AR(0.12, { interval: [11, 19] })],
     olympics: [CR(0.45, { freq: 640 }), BI(0.16)],
     rome_founding: [W(0.3), BI(0.2), FI(0.16, { crackle: [0.3, 0.9] })],
     democracy: [CR(0.4, { freq: 580 })],
     buddha: [DR(0.32, [98, 147]), BE(0.12, { freq: 420, interval: [10, 18] }), BI(0.12, { interval: [6, 12] })],
-    marathon: [CR(0.35, { freq: 460 }), DRUMS(0.16), HB(0.1)],
-    alexander: [W(0.35), CR(0.22), DRUMS(0.13)],
-    qin: [DR(0.25, [110, 220]), DRUMS(0.15), W(0.25)],
-    caesar: [CR(0.28, { freq: 400 }), HB(0.14), DR(0.2, [73, 110])],
+    marathon: [BC(0.1), MC(0.1), DRUMS(0.12), HB(0.08)],
+    alexander: [W(0.25), BC(0.08), MC(0.09), DRUMS(0.1)],
+    qin: [DR(0.2, [110, 220]), MC(0.11), DRUMS(0.1), W(0.18)],
+    caesar: [BC(0.09), MC(0.08), HB(0.1), DR(0.16, [73, 110])],
     rome_empire: [CR(0.32), DRUMS(0.13), DR(0.18, [82, 123])],
     jesus_birth: [DR(0.26, [147, 220]), SH(0.18, { interval: [4, 8] }), W(0.16)],
     crucifixion: [TH(0.35, { interval: [8, 15] }), W(0.4, { freq: 320 }), DR(0.2, [65, 98])],
-    jerusalem: [FI(0.35), CR(0.28, { freq: 430 }), RU(0.3)],
+    jerusalem: [FI(0.26), BC(0.08), MC(0.07), RU(0.22)],
     islam: [W(0.4, { freq: 500 }), DR(0.24, [123, 185]), SH(0.12)],
-    crusades: [W(0.35), DRUMS(0.15), CR(0.22, { freq: 440 })],
+    crusades: [W(0.25), BC(0.08), MC(0.1), DRUMS(0.12)],
     reformation: [CR(0.28), BE(0.16, { freq: 380, interval: [7, 13] })],
     pompeii: [RU(0.6, { freq: 140 }), TH(0.4, { interval: [5, 10] }), W(0.3, { freq: 300 })],
     paper: [W(0.25, { freq: 560 }), CR(0.18)],
@@ -424,24 +548,24 @@ export function createAmbience() {
     rome_fall: [W(0.45, { freq: 340 }), RU(0.3), CR(0.14, { freq: 380 })],
     charlemagne: [BE(0.2, { freq: 340, interval: [6, 11] }), CR(0.24), DR(0.16, [98, 147])],
     vikings: [OC(0.5), W(0.4, { freq: 320, speed: 0.12 }), SH(0.12, { lo: 1400, hi: 2600, interval: [4, 9] })],
-    hastings: [CR(0.32, { freq: 430 }), DRUMS(0.16), W(0.28)],
-    mongols: [W(0.5, { freq: 380, speed: 0.16 }), MA(0.18, { interval: [0.4, 0.55], hiss: false }), RU(0.28)],
+    hastings: [BC(0.09), MC(0.11), DRUMS(0.13), W(0.2)],
+    mongols: [W(0.35, { freq: 380, speed: 0.16 }), MC(0.13, { spacing: 0.16, steps: 6, interval: [1, 1.5] }), BC(0.07), RU(0.2)],
     black_death: [W(0.35, { freq: 300 }), BE(0.14, { freq: 240, interval: [9, 16] }), DR(0.2, [62, 93])],
     printing_press: [MA(0.22, { interval: [0.8, 1 ] }), CR(0.18)],
-    constantinople: [TH(0.4, { interval: [6, 11], short: true }), CR(0.3, { freq: 430 }), DRUMS(0.14)],
+    constantinople: [AR(0.22, { interval: [7, 13] }), BC(0.08), MC(0.08), DRUMS(0.1)],
     columbus: [OC(0.5), W(0.3), BI(0.2, { interval: [4, 9] })],
     pirates: [OC(0.5), W(0.35, { freq: 360 }), TH(0.2, { interval: [11, 20], short: true })],
     king_tut: [DR(0.24, [82, 123]), W(0.2, { freq: 380 }), SH(0.14, { interval: [5, 10] })],
     scientific_rev: [DR(0.24, [110, 165]), SH(0.2), W(0.16, { freq: 420 })],
     industrial: [MA(0.3, { interval: [0.62, 0.72] }), FI(0.2, { crackle: [0.4, 1.2] }), RU(0.2)],
-    revolution: [CR(0.42, { freq: 520 }), DRUMS(0.16), TH(0.16, { interval: [12, 22], short: true })],
+    revolution: [BC(0.11, { interval: [6, 12] }), MC(0.09), AR(0.14, { interval: [10, 18] }), DRUMS(0.1)],
     vaccine: [DR(0.24, [131, 196]), SH(0.16), HB(0.1, { interval: [1.2, 1.35] })],
     telephone: [HU(0.2, { freq: 100 }), BL(0.12, { lo: 500, hi: 900, interval: [2, 5] }), CR(0.12)],
     first_flight: [W(0.55, { freq: 440, speed: 0.15 }), BI(0.16)],
-    titanic: [OC(0.45, { speed: 0.06 }), W(0.35, { freq: 300 }), DR(0.18, [65, 98])],
-    ww1: [RA(0.3), TH(0.3, { interval: [7, 13] }), RU(0.3)],
+    titanic: [OC(0.38, { speed: 0.06 }), HO(0.13, { interval: [12, 20], freq: 92 }), W(0.25, { freq: 300 }), DR(0.14, [65, 98])],
+    ww1: [RA(0.22), AR(0.23, { interval: [7, 14] }), GF(0.1, { interval: [2.7, 5.2], rounds: [2, 5] }), MC(0.06)],
     television: [ST(0.3), HU(0.18, { freq: 90 })],
-    ww2: [RU(0.4), TH(0.3, { interval: [8, 14] }), MA(0.14, { interval: [0.5, 0.62], hiss: false })],
+    ww2: [AR(0.24, { interval: [6, 12] }), GF(0.12, { interval: [2.2, 4.6], rounds: [3, 7] }), SI(0.05, { interval: [16, 27] }), RU(0.16)],
     computer: [HU(0.22, { freq: 110 }), BL(0.16, { lo: 800, hi: 2000, interval: [0.7, 2] }), ST(0.1)],
     dna: [DR(0.26, [110, 165]), SH(0.18), HB(0.1, { interval: [1.15, 1.3] })],
     moon: [DR(0.3, [55, 82.5]), ST(0.12), SH(0.16, { interval: [4, 8] })],
@@ -451,14 +575,14 @@ export function createAmbience() {
     berlin_wall: [CR(0.45, { freq: 620 }), FI(0.18, { crackle: [0.4, 1.4] }), BE(0.1, { freq: 520, interval: [10, 18] })],
     internet: [HU(0.18, { freq: 120 }), BL(0.16, { lo: 900, hi: 2200, interval: [0.8, 2.4] }), ST(0.08)],
     dotcom_bubble: [HU(0.16, { freq: 110 }), BL(0.18, { lo: 500, hi: 1600, rise: true, interval: [0.9, 2.4] }), CR(0.14, { freq: 480 })],
-    sept_11: [W(0.28, { freq: 300, speed: 0.05 }), DR(0.2, [65, 98])],
+    sept_11: [W(0.24, { freq: 300, speed: 0.05 }), SI(0.035, { interval: [18, 30], low: 510, high: 690 }), DR(0.16, [65, 98])],
     smartphone: [BL(0.16, { lo: 900, hi: 2400, interval: [1, 2.8] }), HU(0.14, { freq: 130 })],
     financial_crash: [CR(0.3, { freq: 440 }), HB(0.12), HU(0.12, { freq: 90 })],
     mars_rover: [W(0.45, { freq: 240, speed: 0.07 }), ST(0.12), DR(0.2, [58, 87])],
     trillion_dollar_company: [HU(0.16, { freq: 120 }), BL(0.14, { lo: 1000, hi: 2400, interval: [1.2, 3] }), SH(0.14)],
     covid: [DR(0.24, [73, 110]), HB(0.12, { interval: [1.2, 1.4] }), ST(0.08)],
-    ukraine: [W(0.4, { freq: 340 }), RU(0.3), DR(0.18, [65, 98])],
-    hormuz: [OC(0.45), PI(0.16, { interval: [4.5, 7] }), RU(0.3, { freq: 90 })],
+    ukraine: [W(0.22, { freq: 340 }), AR(0.3, { interval: [4.5, 9] }), GF(0.15, { interval: [1.6, 3.8], rounds: [3, 8] }), BC(0.055, { interval: [10, 18] }), ST(0.055)],
+    hormuz: [OC(0.32), AR(0.23, { interval: [5, 11], freq: 145 }), GF(0.09, { interval: [3.2, 6.4], rounds: [2, 4] }), HO(0.1, { interval: [10, 18], freq: 104 }), PI(0.08, { interval: [4.5, 7] })],
   };
   const DEFAULT_RECIPE = [W(0.3), DR(0.18, [98, 147])];
 
