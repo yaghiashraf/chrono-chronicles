@@ -40,3 +40,9 @@ http://127.0.0.1:4173/
   `scenes.js` composes them into a unique, topical animation for each of the
   75 events (e.g. aurora for `vikings`, scrolling helix for `dna`, tribute
   beams for `sept_11`). Disabled under `prefers-reduced-motion`.
+- `ambience.js` layers local public-domain/CC0 field recordings (fire, forest,
+  surf, storm, battlefield) with Web Audio accents such as bells, machinery,
+  static, sonar, artillery, and sirens. It crossfades between events, ducks
+  beneath narration, starts only after a user gesture, and can be muted with
+  the topbar Sound toggle (persisted in localStorage). See `SOUND_SOURCES.md`
+  for the source and license of each recording.
