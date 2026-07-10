@@ -11,3 +11,12 @@ required.
 | `storm.mp3` | [Rain and thunder.ogg](https://commons.wikimedia.org/wiki/File:Rain_and_thunder.ogg) by Caesar | Public domain |
 | `war.mp3` | [Dragout – War sounds](https://commons.wikimedia.org/wiki/File:Dragout_-_War_sounds_(cc0)_(freesound).ogg) by Dragout | CC0 |
 | `waves.mp3` | [Monplaisir – Waves](https://commons.wikimedia.org/wiki/File:Monplaisir_-_06_-_Waves.ogg) by Monplaisir | CC0 |
+
+## Placement policy
+
+- The recorded war bed is limited to World War I, World War II, the war in
+  Ukraine, and the Hormuz blockade. Ancient and medieval conflicts use
+  contextual wind, fire, drums, crowds, and period-appropriate low-frequency
+  cannon only where relevant.
+- Field recordings are filtered to soften sharp high-frequency hiss, mixed
+  below narration, and ducked further while narration is playing.

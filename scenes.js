@@ -377,7 +377,8 @@ export const eventScenes = {
   ],
   financial_crash: [
     { type: "ticker", trend: -1, startY: 0.2, range: 0.46, color: CRIMSON, alpha: 0.6, duration: 6, hold: 1.2 },
-    { type: "particles", count: 16, shape: "glyph", glyphs: "%$▼-", size: [1.3, 2.2], colors: [CRIMSON, "#e88f8f"], alpha: [0.22, 0.45], spawn: "top", vy: [36, 70], vx: [-8, 8] },
+    { type: "particles", count: (w) => (w < 600 ? 20 : 34), shape: "glyph", glyphs: "$", size: [2, 4.6], colors: ["#f04f55", CRIMSON, "#b82d3a"], alpha: [0.42, 0.78], spawn: "top", vy: [42, 86], vx: [-12, 12], sway: { amp: 12, speed: 0.8 }, blend: "lighter", life: [3.8, 7.2] },
+    { type: "particles", count: 10, shape: "glyph", glyphs: "▼", size: [1.1, 1.9], colors: ["#e85b5d"], alpha: [0.2, 0.4], spawn: "top", vy: [32, 60], vx: [-7, 7], life: [3.2, 5.8] },
     { type: "fog", count: 4, color: "#5c5350", alpha: [0.04, 0.08], band: [0.55, 0.95], speed: [-8, -3] },
   ],
   mars_rover: [

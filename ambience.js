@@ -6,10 +6,12 @@ const MASTER_LEVEL = 0.16;
 const DUCK_FACTOR = 0.38;
 const FADE_IN = 1.6;
 const FADE_OUT = 1.1;
-const BED_LEVEL = 0.34;
+const BED_LEVEL = 0.27;
 
 // These real field recordings carry the scene. The procedural layers below
 // remain as small, event-specific accents rather than the whole soundscape.
+// The war recording is deliberately reserved for twentieth-century and modern
+// conflicts; pre-gunpowder scenes use contextual ambience instead.
 const BED_SOURCES = {
   fire: "./assets/ambience/fire.mp3",
   forest: "./assets/ambience/forest.mp3",
@@ -22,37 +24,23 @@ const BED_BY_EVENT = {
   earth_formation: "fire",
   first_life: "waves",
   cambrian: "waves",
-  great_dying: "storm",
-  dinosaurs: "storm",
   mammals: "forest",
   lucy: "forest",
-  ice_age: "storm",
   fire: "fire",
   cavemen: "fire",
   agriculture: "forest",
-  troy: "war",
+  troy: "fire",
   bronze_collapse: "fire",
-  marathon: "war",
-  alexander: "war",
-  qin: "war",
-  caesar: "war",
   pompeii: "fire",
-  rome_fall: "war",
-  hastings: "war",
-  mongols: "war",
+  rome_fall: "fire",
   jerusalem: "fire",
-  crusades: "war",
-  constantinople: "war",
+  constantinople: "fire",
   vikings: "waves",
-  black_death: "storm",
   columbus: "waves",
   pirates: "waves",
-  revolution: "war",
   titanic: "waves",
-  ww1: "storm",
+  ww1: "war",
   ww2: "war",
-  challenger: "storm",
-  sept_11: "storm",
   ukraine: "war",
   hormuz: "war",
 };
@@ -88,7 +76,7 @@ export function createAmbience() {
   let duckGain = null;
   const noise = {};
   let scene = null; // { gain, stops, timers, alive }
-  let bed = null; // { key, audio, source, gain }
+  let bed = null; // { key, audio, source, deHiss, tone, gain }
   let sceneId = null;
   let enabled = loadEnabled();
   let ducked = false;
@@ -169,6 +157,8 @@ export function createAmbience() {
     setTimeout(() => {
       old.audio.pause();
       try { old.source.disconnect(); } catch { /* detached */ }
+      try { old.deHiss.disconnect(); } catch { /* detached */ }
+      try { old.tone.disconnect(); } catch { /* detached */ }
       try { old.gain.disconnect(); } catch { /* detached */ }
     }, (FADE_OUT + 0.2) * 1000);
   }
@@ -184,15 +174,25 @@ export function createAmbience() {
 
     const audio = new Audio(BED_SOURCES[key]);
     const source = ctx.createMediaElementSource(audio);
+    const deHiss = ctx.createBiquadFilter();
+    deHiss.type = "highshelf";
+    deHiss.frequency.value = 2600;
+    deHiss.gain.value = -7;
+    const tone = ctx.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 4600;
+    tone.Q.value = 0.45;
     const gain = ctx.createGain();
     audio.loop = true;
     audio.preload = "auto";
     audio.playsInline = true;
     gain.gain.value = 0;
-    source.connect(gain);
+    source.connect(deHiss);
+    deHiss.connect(tone);
+    tone.connect(gain);
     gain.connect(duckGain);
 
-    const nextBed = { key, audio, source, gain };
+    const nextBed = { key, audio, source, deHiss, tone, gain };
     bed = nextBed;
     const now = ctx.currentTime;
     gain.gain.setValueAtTime(0, now);
@@ -234,12 +234,12 @@ export function createAmbience() {
       const src = noiseSource("white");
       const hp = ctx.createBiquadFilter();
       hp.type = "highpass";
-      hp.frequency.value = 1400;
+      hp.frequency.value = 650;
       const lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = 6500;
+      lp.frequency.value = 3400;
       const g = ctx.createGain();
-      g.gain.value = o.level;
+      g.gain.value = o.level * 0.72;
       src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out);
       s.stops.push(lfo(g.gain, 0.5, o.level * 0.15, o.level));
       s.stops.push(src);
@@ -258,7 +258,7 @@ export function createAmbience() {
         const burst = noiseSource("white");
         const bp = ctx.createBiquadFilter();
         bp.type = "bandpass";
-        bp.frequency.value = rand(1800, 4200);
+        bp.frequency.value = rand(1500, 3000);
         bp.Q.value = 2.5;
         const bg = ctx.createGain();
         burst.connect(bp); bp.connect(bg); bg.connect(out);
@@ -361,28 +361,33 @@ export function createAmbience() {
         envelope(g, o.level, 0.008, 0.16);
         osc.stop(ctx.currentTime + 0.4);
       });
-      if (o.hiss !== false) {
+      if (o.hiss === true) {
         every(s, [2.5, 6], () => {
           const burst = noiseSource("white");
-          const hp = ctx.createBiquadFilter();
-          hp.type = "highpass";
-          hp.frequency.value = 2400;
+          const bp = ctx.createBiquadFilter();
+          bp.type = "bandpass";
+          bp.frequency.value = 1100;
+          bp.Q.value = 0.7;
           const g = ctx.createGain();
-          burst.connect(hp); hp.connect(g); g.connect(out);
-          envelope(g, o.level * 0.4, 0.08, rand(0.5, 1.1));
+          burst.connect(bp); bp.connect(g); g.connect(out);
+          envelope(g, o.level * 0.24, 0.12, rand(0.5, 1.1));
           setTimeout(() => burst.stop(), 1600);
         });
       }
     },
     static(s, out, o) {
       const src = noiseSource("white");
-      const hp = ctx.createBiquadFilter();
-      hp.type = "highpass";
-      hp.frequency.value = 2200;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = o.freq ?? 1350;
+      bp.Q.value = 0.55;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 2500;
       const g = ctx.createGain();
-      g.gain.value = o.level * 0.6;
-      src.connect(hp); hp.connect(g); g.connect(out);
-      s.stops.push(lfo(g.gain, 3.1, o.level * 0.25, o.level * 0.6));
+      g.gain.value = o.level * 0.32;
+      src.connect(bp); bp.connect(lp); lp.connect(g); g.connect(out);
+      s.stops.push(lfo(g.gain, 1.9, o.level * 0.12, o.level * 0.32));
       s.stops.push(src);
     },
     ping(s, out, o) {
@@ -487,12 +492,12 @@ export function createAmbience() {
           const crack = noiseSource("white");
           const band = ctx.createBiquadFilter();
           band.type = "bandpass";
-          band.frequency.value = rand(1_250, 2_800);
-          band.Q.value = 1.6;
+          band.frequency.value = rand(900, 1_800);
+          band.Q.value = 1.2;
           const crackGain = ctx.createGain();
           crack.connect(band); band.connect(crackGain); crackGain.connect(out);
           crackGain.gain.setValueAtTime(0.0001, t0);
-          crackGain.gain.exponentialRampToValueAtTime(o.level * rand(0.52, 1), t0 + 0.003);
+          crackGain.gain.exponentialRampToValueAtTime(o.level * rand(0.45, 0.82), t0 + 0.004);
           crackGain.gain.exponentialRampToValueAtTime(0.0001, t0 + rand(0.035, 0.075));
           setTimeout(() => crack.stop(), (t0 - ctx.currentTime + 0.25) * 1000);
         }
@@ -620,7 +625,7 @@ export function createAmbience() {
     egypt: [W(0.35, { freq: 480 }), DR(0.22, [110, 165]), CR(0.14)],
     babylon: [CR(0.3), W(0.25), BE(0.1, { freq: 620, interval: [12, 22] })],
     troy: [FI(0.3), BC(0.11, { interval: [7, 13] }), MC(0.08), DRUMS(0.1)],
-    bronze_collapse: [W(0.32), RU(0.25), FI(0.18, { crackle: [0.3, 0.9] }), AR(0.12, { interval: [11, 19] })],
+    bronze_collapse: [W(0.32), RU(0.25), FI(0.18, { crackle: [0.3, 0.9] }), DRUMS(0.08)],
     olympics: [CR(0.45, { freq: 640 }), BI(0.16)],
     rome_founding: [W(0.3), BI(0.2), FI(0.16, { crackle: [0.3, 0.9] })],
     democracy: [CR(0.4, { freq: 580 })],
@@ -628,7 +633,7 @@ export function createAmbience() {
     marathon: [BC(0.1), MC(0.1), DRUMS(0.12), HB(0.08)],
     alexander: [W(0.25), BC(0.08), MC(0.09), DRUMS(0.1)],
     qin: [DR(0.2, [110, 220]), MC(0.11), DRUMS(0.1), W(0.18)],
-    caesar: [BC(0.09), MC(0.08), HB(0.1), DR(0.16, [73, 110])],
+    caesar: [CR(0.18, { freq: 420 }), HB(0.1), DR(0.16, [73, 110])],
     rome_empire: [CR(0.32), DRUMS(0.13), DR(0.18, [82, 123])],
     jesus_birth: [DR(0.26, [147, 220]), SH(0.18, { interval: [4, 8] }), W(0.16)],
     crucifixion: [TH(0.35, { interval: [8, 15] }), W(0.4, { freq: 320 }), DR(0.2, [65, 98])],
@@ -645,37 +650,37 @@ export function createAmbience() {
     hastings: [BC(0.09), MC(0.11), DRUMS(0.13), W(0.2)],
     mongols: [W(0.35, { freq: 380, speed: 0.16 }), MC(0.13, { spacing: 0.16, steps: 6, interval: [1, 1.5] }), BC(0.07), RU(0.2)],
     black_death: [W(0.35, { freq: 300 }), BE(0.14, { freq: 240, interval: [9, 16] }), DR(0.2, [62, 93])],
-    printing_press: [MA(0.22, { interval: [0.8, 1 ] }), CR(0.18)],
-    constantinople: [AR(0.22, { interval: [7, 13] }), BC(0.08), MC(0.08), DRUMS(0.1)],
+    printing_press: [MA(0.22, { interval: [0.8, 1], hiss: false }), CR(0.18)],
+    constantinople: [AR(0.15, { interval: [11, 20], freq: 118 }), BC(0.08), MC(0.08), DRUMS(0.1)],
     columbus: [OC(0.5), W(0.3), BI(0.2, { interval: [4, 9] })],
     pirates: [OC(0.5), W(0.35, { freq: 360 }), TH(0.2, { interval: [11, 20], short: true })],
     king_tut: [DR(0.24, [82, 123]), W(0.2, { freq: 380 }), SH(0.14, { interval: [5, 10] })],
     scientific_rev: [DR(0.24, [110, 165]), SH(0.2), W(0.16, { freq: 420 })],
-    industrial: [MA(0.3, { interval: [0.62, 0.72] }), FI(0.2, { crackle: [0.4, 1.2] }), RU(0.2)],
-    revolution: [BC(0.11, { interval: [6, 12] }), MC(0.09), AR(0.14, { interval: [10, 18] }), DRUMS(0.1)],
+    industrial: [MA(0.3, { interval: [0.62, 0.72], hiss: false }), FI(0.2, { crackle: [0.4, 1.2] }), RU(0.2)],
+    revolution: [BC(0.11, { interval: [6, 12] }), MC(0.09), AR(0.08, { interval: [14, 25], freq: 112 }), DRUMS(0.1)],
     vaccine: [DR(0.24, [131, 196]), SH(0.16), HB(0.1, { interval: [1.2, 1.35] })],
     telephone: [HU(0.2, { freq: 100 }), BL(0.12, { lo: 500, hi: 900, interval: [2, 5] }), CR(0.12)],
     first_flight: [W(0.55, { freq: 440, speed: 0.15 }), BI(0.16)],
     titanic: [OC(0.38, { speed: 0.06 }), HO(0.13, { interval: [12, 20], freq: 92 }), W(0.25, { freq: 300 }), DR(0.14, [65, 98])],
-    ww1: [RA(0.22), AR(0.23, { interval: [7, 14] }), GF(0.1, { interval: [2.7, 5.2], rounds: [2, 5] }), MC(0.06)],
-    television: [ST(0.3), HU(0.18, { freq: 90 })],
-    ww2: [AR(0.24, { interval: [6, 12] }), GF(0.12, { interval: [2.2, 4.6], rounds: [3, 7] }), SI(0.05, { interval: [16, 27] }), RU(0.16)],
-    computer: [HU(0.22, { freq: 110 }), BL(0.16, { lo: 800, hi: 2000, interval: [0.7, 2] }), ST(0.1)],
+    ww1: [RA(0.18), AR(0.2, { interval: [8, 16] }), GF(0.075, { interval: [3.5, 6.4], rounds: [2, 4] }), MC(0.06)],
+    television: [ST(0.16), HU(0.18, { freq: 90 })],
+    ww2: [AR(0.21, { interval: [7, 14] }), GF(0.09, { interval: [3, 5.8], rounds: [2, 5] }), SI(0.04, { interval: [18, 30] }), RU(0.16)],
+    computer: [HU(0.22, { freq: 110 }), BL(0.16, { lo: 800, hi: 2000, interval: [0.7, 2] })],
     dna: [DR(0.26, [110, 165]), SH(0.18), HB(0.1, { interval: [1.15, 1.3] })],
-    moon: [DR(0.3, [55, 82.5]), ST(0.12), SH(0.16, { interval: [4, 8] })],
+    moon: [DR(0.3, [55, 82.5]), ST(0.04), SH(0.16, { interval: [4, 8] })],
     voyager: [DR(0.34, [49, 73.5]), SH(0.18, { interval: [3.5, 8] })],
     smallpox: [DR(0.26, [131, 196]), SH(0.18), HB(0.08, { interval: [1.25, 1.4] })],
-    challenger: [DR(0.28, [65, 98]), ST(0.14), W(0.2, { freq: 340 })],
+    challenger: [DR(0.28, [65, 98]), W(0.2, { freq: 340 })],
     berlin_wall: [CR(0.45, { freq: 620 }), FI(0.18, { crackle: [0.4, 1.4] }), BE(0.1, { freq: 520, interval: [10, 18] })],
-    internet: [HU(0.18, { freq: 120 }), BL(0.16, { lo: 900, hi: 2200, interval: [0.8, 2.4] }), ST(0.08)],
+    internet: [HU(0.18, { freq: 120 }), BL(0.16, { lo: 900, hi: 2200, interval: [0.8, 2.4] })],
     dotcom_bubble: [HU(0.16, { freq: 110 }), BL(0.18, { lo: 500, hi: 1600, rise: true, interval: [0.9, 2.4] }), CR(0.14, { freq: 480 })],
-    sept_11: [W(0.24, { freq: 300, speed: 0.05 }), SI(0.035, { interval: [18, 30], low: 510, high: 690 }), DR(0.16, [65, 98])],
+    sept_11: [W(0.2, { freq: 300, speed: 0.05 }), DR(0.16, [65, 98])],
     smartphone: [BL(0.16, { lo: 900, hi: 2400, interval: [1, 2.8] }), HU(0.14, { freq: 130 })],
     financial_crash: [CR(0.3, { freq: 440 }), HB(0.12), HU(0.12, { freq: 90 })],
-    mars_rover: [W(0.45, { freq: 240, speed: 0.07 }), ST(0.12), DR(0.2, [58, 87])],
+    mars_rover: [W(0.45, { freq: 240, speed: 0.07 }), DR(0.2, [58, 87])],
     trillion_dollar_company: [HU(0.16, { freq: 120 }), BL(0.14, { lo: 1000, hi: 2400, interval: [1.2, 3] }), SH(0.14)],
-    covid: [DR(0.24, [73, 110]), HB(0.12, { interval: [1.2, 1.4] }), ST(0.08)],
-    ukraine: [W(0.22, { freq: 340 }), AR(0.3, { interval: [4.5, 9] }), GF(0.15, { interval: [1.6, 3.8], rounds: [3, 8] }), BC(0.055, { interval: [10, 18] }), ST(0.055)],
+    covid: [DR(0.24, [73, 110]), HB(0.12, { interval: [1.2, 1.4] })],
+    ukraine: [W(0.22, { freq: 340 }), AR(0.26, { interval: [5.5, 10.5] }), GF(0.11, { interval: [2.6, 4.8], rounds: [2, 5] }), RU(0.1, { freq: 95 })],
     hormuz: [OC(0.32), AR(0.23, { interval: [5, 11], freq: 145 }), GF(0.09, { interval: [3.2, 6.4], rounds: [2, 4] }), HO(0.1, { interval: [10, 18], freq: 104 }), PI(0.08, { interval: [4.5, 7] })],
   };
   const DEFAULT_RECIPE = [W(0.3), DR(0.18, [98, 147])];
