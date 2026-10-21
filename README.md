@@ -4,7 +4,7 @@ Static rebuild of the deployed Chrono Chronicles experience at:
 
 https://16bit-historical-journey-rebuild.vercel.app/
 
-The original source project was not present in this workspace, so this overhaul is built as a standalone HTML/CSS/JS app under `/home/yaghiashraf/codex/chrono-chronicles-overhaul`.
+The original source project was not present in this workspace, so this overhaul is built as a standalone HTML/CSS/JS app under `/home/yaghiashraf/claude-code/games/chrono-chronicles`.
 
 ## Run locally
 
